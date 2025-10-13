@@ -5,7 +5,6 @@ A lightweight Flask backend that exposes **functional dissociation** endpoints o
 
 The service provides two APIs that return studies mentioning one concept/coordinate **but not** the other (A \ B). You can also query the opposite direction (B \ A).
 
----
 
 ## Table of Contents
 
