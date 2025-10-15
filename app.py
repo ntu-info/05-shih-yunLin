@@ -4,8 +4,9 @@ import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import OperationalError
+
 # from dotenv import load_dotenv
-# load_dotenv() 在本地執行，請將你的 database URL 放在 .env 裡
+# load_dotenv() # 在本地執行，請將你的 database URL 放在 .env 裡
 _engine = None
 
 def get_engine():
@@ -96,31 +97,44 @@ def create_app():
     @app.get("/dissociate/terms/<term_a>/<term_b>", endpoint="dissociate_terms")
     def dissociate_terms(term_a, term_b):
         eng = get_engine()
-        payload = {"ok": False, "term_a": term_a, "term_b": term_b}
+        # 構造完整的 term 名稱（根據你的資料格式）
+        full_term_a = f"terms_abstract_tfidf__{term_a}"
+        full_term_b = f"terms_abstract_tfidf__{term_b}"
+        
+        payload = {
+            "ok": False,
+            "term_a": term_a,
+            "term_b": term_b
+        }
 
         try:
             with eng.begin() as conn:
                 conn.execute(text("SET search_path TO ns, public;"))
 
-                # 查詢同時有 term_a 但沒有 term_b 的 study_id
+                # 查詢有 term_a 但沒有 term_b 的 study_id
                 try:
-                    rows = conn.execute(text("""
-                        SELECT DISTINCT at1.study_id
-                        FROM ns.annotations_terms at1
-                        WHERE at1.term = :term_a
-                        AND NOT EXISTS (
-                            SELECT 1 FROM ns.annotations_terms at2
-                            WHERE at2.study_id = at1.study_id AND at2.term = :term_b
-                        )
-                        LIMIT 50
-                    """), {"term_a": term_a, "term_b": term_b}).fetchall()
+                    rows = conn.execute(
+                        text("""
+                            SELECT DISTINCT at1.study_id
+                            FROM ns.annotations_terms at1
+                            WHERE at1.term = :term_a
+                            AND NOT EXISTS (
+                                SELECT 1
+                                FROM ns.annotations_terms at2
+                                WHERE at2.study_id = at1.study_id
+                                    AND at2.term = :term_b
+                            )
+                            LIMIT 50
+                        """),
+                        {"term_a": full_term_a, "term_b": full_term_b}
+                    ).fetchall()
                     study_ids = [r[0] for r in rows]
                     payload["study_ids"] = study_ids
                 except Exception as e:
                     payload["study_ids"] = []
                     payload["query_error"] = str(e)
 
-                # 查詢 metadata（只選有的欄位）
+                # 查詢對應的 metadata
                 try:
                     if study_ids:
                         meta_rows = conn.execute(
@@ -140,7 +154,7 @@ def create_app():
         except Exception as e:
             payload["error"] = str(e)
             return jsonify(payload), 500
-        
+
     @app.get("/dissociate/locations/<coords_a>/<coords_b>", endpoint="dissociate_locations")
     def dissociate_locations(coords_a, coords_b):
         eng = get_engine()

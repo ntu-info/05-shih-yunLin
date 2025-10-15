@@ -5,43 +5,53 @@ A lightweight Flask backend that exposes **functional dissociation** endpoints o
 
 The service provides two APIs that return studies mentioning one concept/coordinate **but not** the other (A \ B). You can also query the opposite direction (B \ A).
 
-
 ## Table of Contents
 
 - [Endpoints](#endpoints)
   - [Dissociate by terms](#dissociate-by-terms)
   - [Dissociate by MNI coordinates](#dissociate-by-mni-coordinates)
 - [Quick Start](#quick-start)
+  - [1) Provision PostgreSQL](#1-provision-postgresql)
   - [2) Verify the connection](#2-verify-the-connection)
   - [3) Populate the database](#3-populate-the-database)
   - [4) Run the Flask service](#4-run-the-flask-service)
   - [5) Smoke tests](#5-smoke-tests)
 - [Environment Variables](#environment-variables)
+- [Example Requests](#example-requests)
+- [Requirements](#requirements)
 - [Notes](#notes)
 - [License](#license)
 
+---
 
 ## Endpoints
 
+### Dissociate by terms
 
 ```
 GET /dissociate/terms/<term_a>/<term_b>
+```
 
 Returns studies that mention **`term_a`** but **not** `term_b`.
 
+**Examples**
 
 ```
 /dissociate/terms/posterior_cingulate/ventromedial_prefrontal
+/dissociate/terms/ventromedial_prefrontal/posterior_cingulate
 ```
 
 ---
+
 ### Dissociate by MNI coordinates
 
 ```
+GET /dissociate/locations/<x1_y1_z1>/<x2_y2_z2>
 ```
 
 Coordinates are passed as `x_y_z` (underscores, not commas).  
 Returns studies that mention **`[x1, y1, z1]`** but **not** `[x2, y2, z2]`.
+
 **Default Mode Network test case**
 
 ```
@@ -62,7 +72,7 @@ Create a PostgreSQL database (e.g., on Render).
 ### 2) Verify the connection
 
 ```bash
-python check_db.py --url "postgresql://<USER>:<PASSWORD>@<HOST>:5432/<DBNAME>"
+python check_db.py --url "postgresql://shih_yun:f6jUpbNz3ZVrhjsddNkcXpCzrj5FEPaC@dpg-d3jp1u49c44c73c27npg-a.oregon-postgres.render.com/neurosynthbackend"
 ```
 
 ### 3) Populate the database
@@ -77,47 +87,47 @@ Deploy `app.py` as a Web Service (e.g., on Render) and set the environment varia
 
 - `DB_URL=postgresql://shih_yun:f6jUpbNz3ZVrhjsddNkcXpCzrj5FEPaC@dpg-d3jp1u49c44c73c27npg-a.oregon-postgres.render.com/neurosynthbackend`
 
-用 Gunicorn 啟動：
+Start with Gunicorn:
 
 ```bash
 gunicorn app:app --bind 0.0.0.0:$PORT
 ```
 
-#### 本地測試
+#### Local Testing
 
-1. 安裝 Flask：
+1. Install Flask:
    ```bash
    pip install flask
    ```
 
-2. 在專案根目錄建立 `.env` 檔案，內容如下（請填入你的 DB_URL）：
+2. Create a `.env` file in your project root with your DB_URL:
    ```
    DB_URL=postgresql://shih_yun:f6jUpbNz3ZVrhjsddNkcXpCzrj5FEPaC@dpg-d3jp1u49c44c73c27npg-a.oregon-postgres.render.com/neurosynthbackend
    ```
 
-3. 啟動 Flask 伺服器（選擇一種）：
+3. Start Flask server (choose one):
    ```bash
    sudo flask --app ns-mini.py run --port 80 --debug
-   # 或
+   # or
    flask --app ns-mini.py run --port 5001 --debug
    ```
 
-**說明：**  
-請將 `app.py` 裡 dotenv 的註解移除，改成：
+**Note:**  
+Remove the comments in `app.py` for dotenv and use:
 ```python
 from dotenv import load_dotenv
-load_dotenv()  # 在本地執行，請將你的 database URL 放在 .env 裡
+load_dotenv()  # For local run, put your database URL in .env
 ```
-這樣 Flask 會自動讀取 `.env` 檔案裡的 `DB_URL`，本地執行就能連線資料庫。
+This lets Flask automatically read `DB_URL` from `.env` for local database connection.
 
-SQL 測試（不透過 API）：你可以直接用 `sql.py` 測試 dissociate 查詢
+You can also use `sql.py` for direct SQL term queries (no API).
 
 ### 5) Smoke tests
 
 After deployment, check the basic endpoints:
 
-- Images: `https://<your-app>.onrender.com/img`
-- DB connectivity: `https://<your-app>.onrender.com/test_db`
+- Images: `https://zero5-shih-yunlin.onrender.com/img`
+- DB connectivity: `https://zero5-shih-yunlin.onrender.com/test_db`
 
 ---
 
@@ -138,6 +148,11 @@ After deployment, check the basic endpoints:
 ```bash
 curl https://zero5-shih-yunlin.onrender.com/dissociate/terms/posterior_cingulate/ventromedial_prefrontal
 curl https://zero5-shih-yunlin.onrender.com/dissociate/terms/ventromedial_prefrontal/posterior_cingulate
+```
+
+```bash
+curl https://zero5-shih-yunlin.onrender.com/dissociate/terms/amygdala/cortices
+curl https://zero5-shih-yunlin.onrender.com/dissociate/terms/cortices/amygdala
 ```
 
 **By coordinates**
@@ -166,7 +181,8 @@ curl https://zero5-shih-yunlin.onrender.com/dissociate/locations/-2_50_-6/0_-52_
 - Path parameters use underscores (`_`) between coordinates: `x_y_z`.
 - Term strings should be URL-safe (e.g., `posterior_cingulate`, `ventromedial_prefrontal`). Replace spaces with underscores on the client if needed.
 - The term/coordinate pairs above illustrate a **Default Mode Network** dissociation example. Adjust for your analysis.
-- `GPT-4.1.json`：作業用的 JSON 檔案，可用於模型測試或資料記錄。
+- `GPT-4.1.json`: Assignment-related JSON file, useful for model testing or data logging.
+
 ---
 
 ## License
