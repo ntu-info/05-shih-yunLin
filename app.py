@@ -4,8 +4,8 @@ import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import OperationalError
-#from dotenv import load_dotenv
-#load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv() 在本地執行，請將你的 database URL 放在 .env 裡
 _engine = None
 
 def get_engine():

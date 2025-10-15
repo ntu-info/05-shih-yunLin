@@ -12,47 +12,36 @@ The service provides two APIs that return studies mentioning one concept/coordin
   - [Dissociate by terms](#dissociate-by-terms)
   - [Dissociate by MNI coordinates](#dissociate-by-mni-coordinates)
 - [Quick Start](#quick-start)
-  - [1) Provision PostgreSQL](#1-provision-postgresql)
   - [2) Verify the connection](#2-verify-the-connection)
   - [3) Populate the database](#3-populate-the-database)
   - [4) Run the Flask service](#4-run-the-flask-service)
   - [5) Smoke tests](#5-smoke-tests)
 - [Environment Variables](#environment-variables)
-- [Example Requests](#example-requests)
-- [Requirements](#requirements)
 - [Notes](#notes)
 - [License](#license)
 
----
 
 ## Endpoints
 
-### Dissociate by terms
 
 ```
 GET /dissociate/terms/<term_a>/<term_b>
-```
 
 Returns studies that mention **`term_a`** but **not** `term_b`.
 
-**Examples**
 
 ```
 /dissociate/terms/posterior_cingulate/ventromedial_prefrontal
-/dissociate/terms/ventromedial_prefrontal/posterior_cingulate
 ```
 
 ---
-
 ### Dissociate by MNI coordinates
 
 ```
-GET /dissociate/locations/<x1_y1_z1>/<x2_y2_z2>
 ```
 
 Coordinates are passed as `x_y_z` (underscores, not commas).  
 Returns studies that mention **`[x1, y1, z1]`** but **not** `[x2, y2, z2]`.
-
 **Default Mode Network test case**
 
 ```
@@ -79,20 +68,49 @@ python check_db.py --url "postgresql://<USER>:<PASSWORD>@<HOST>:5432/<DBNAME>"
 ### 3) Populate the database
 
 ```bash
-python create_db.py --url "postgresql://<USER>:<PASSWORD>@<HOST>:5432/<DBNAME>"
+python check_db.py --url "postgresql://shih_yun:f6jUpbNz3ZVrhjsddNkcXpCzrj5FEPaC@dpg-d3jp1u49c44c73c27npg-a.oregon-postgres.render.com/neurosynthbackend"
 ```
 
 ### 4) Run the Flask service
 
 Deploy `app.py` as a Web Service (e.g., on Render) and set the environment variable:
 
-- `DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:5432/<DBNAME>`
+- `DB_URL=postgresql://shih_yun:f6jUpbNz3ZVrhjsddNkcXpCzrj5FEPaC@dpg-d3jp1u49c44c73c27npg-a.oregon-postgres.render.com/neurosynthbackend`
 
-Use a production server such as Gunicorn as your start command:
+用 Gunicorn 啟動：
 
 ```bash
 gunicorn app:app --bind 0.0.0.0:$PORT
 ```
+
+#### 本地測試
+
+1. 安裝 Flask：
+   ```bash
+   pip install flask
+   ```
+
+2. 在專案根目錄建立 `.env` 檔案，內容如下（請填入你的 DB_URL）：
+   ```
+   DB_URL=postgresql://shih_yun:f6jUpbNz3ZVrhjsddNkcXpCzrj5FEPaC@dpg-d3jp1u49c44c73c27npg-a.oregon-postgres.render.com/neurosynthbackend
+   ```
+
+3. 啟動 Flask 伺服器（選擇一種）：
+   ```bash
+   sudo flask --app ns-mini.py run --port 80 --debug
+   # 或
+   flask --app ns-mini.py run --port 5001 --debug
+   ```
+
+**說明：**  
+請將 `app.py` 裡 dotenv 的註解移除，改成：
+```python
+from dotenv import load_dotenv
+load_dotenv()  # 在本地執行，請將你的 database URL 放在 .env 裡
+```
+這樣 Flask 會自動讀取 `.env` 檔案裡的 `DB_URL`，本地執行就能連線資料庫。
+
+SQL 測試（不透過 API）：你可以直接用 `sql.py` 測試 dissociate 查詢
 
 ### 5) Smoke tests
 
@@ -106,7 +124,8 @@ After deployment, check the basic endpoints:
 ## Environment Variables
 
 - **`DB_URL`** – Full PostgreSQL connection string used by the app.  
-  Example: `postgresql://<USER>:<PASSWORD>@<HOST>:5432/<DBNAME>`
+  Example:  
+  `postgresql://shih_yun:f6jUpbNz3ZVrhjsddNkcXpCzrj5FEPaC@dpg-d3jp1u49c44c73c27npg-a.oregon-postgres.render.com/neurosynthbackend`
 
 > **Security note:** Never commit real credentials to version control. Use environment variables or your hosting provider’s secret manager.
 
@@ -117,15 +136,15 @@ After deployment, check the basic endpoints:
 **By terms**
 
 ```bash
-curl https://<your-app>.onrender.com/dissociate/terms/posterior_cingulate/ventromedial_prefrontal
-curl https://<your-app>.onrender.com/dissociate/terms/ventromedial_prefrontal/posterior_cingulate
+curl https://zero5-shih-yunlin.onrender.com/dissociate/terms/posterior_cingulate/ventromedial_prefrontal
+curl https://zero5-shih-yunlin.onrender.com/dissociate/terms/ventromedial_prefrontal/posterior_cingulate
 ```
 
 **By coordinates**
 
 ```bash
-curl https://<your-app>.onrender.com/dissociate/locations/0_-52_26/-2_50_-6
-curl https://<your-app>.onrender.com/dissociate/locations/-2_50_-6/0_-52_26
+curl https://zero5-shih-yunlin.onrender.com/dissociate/locations/0_-52_26/-2_50_-6
+curl https://zero5-shih-yunlin.onrender.com/dissociate/locations/-2_50_-6/0_-52_26
 ```
 
 ---
@@ -147,7 +166,7 @@ curl https://<your-app>.onrender.com/dissociate/locations/-2_50_-6/0_-52_26
 - Path parameters use underscores (`_`) between coordinates: `x_y_z`.
 - Term strings should be URL-safe (e.g., `posterior_cingulate`, `ventromedial_prefrontal`). Replace spaces with underscores on the client if needed.
 - The term/coordinate pairs above illustrate a **Default Mode Network** dissociation example. Adjust for your analysis.
-
+- `GPT-4.1.json`：作業用的 JSON 檔案，可用於模型測試或資料記錄。
 ---
 
 ## License
